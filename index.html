@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LogForge — AI-Powered Log Aggregator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg: #050a12;
+  --panel: #0a1320;
+  --panel2: #0d1929;
+  --border: rgba(30,90,160,0.25);
+  --accent: #1d8cf8;
+  --accent2: #00e5a0;
+  --red: #ff3b5c;
+  --orange: #ff8c42;
+  --yellow: #ffd166;
+  --text: #c8d8ea;
+  --text2: #5a7a9a;
+  --text3: #2a4560;
+  --crit: #ff3b5c;
+  --high: #ff8c42;
+  --med: #ffd166;
+  --low: #1d8cf8;
+  --font-mono: 'Space Mono', monospace;
+  --font-sans: 'DM Sans', sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font-sans);min-height:100vh;overflow-x:hidden}
+
+/* Grid background */
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(29,140,248,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(29,140,248,0.04) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none;z-index:0;
+}
+
+/* Glow orbs */
+.orb{position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0;opacity:0.15}
+.orb1{width:600px;height:600px;background:#1d8cf8;top:-200px;right:-100px}
+.orb2{width:400px;height:400px;background:#00e5a0;bottom:-100px;left:-100px}
+
+/* Layout */
+.app{display:flex;min-height:100vh;position:relative;z-index:1}
+.sidebar{width:220px;background:linear-gradient(180deg,#080f1a 0%,#05090f 100%);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:100}
+.main{margin-left:220px;flex:1;padding:28px;min-height:100vh}
+
+/* Sidebar */
+.logo{padding:22px 20px 16px;border-bottom:1px solid var(--border)}
+.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#1d8cf8,#00e5a0);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;font-size:18px}
+.logo-name{font-weight:700;font-size:15px;letter-spacing:0.04em;color:#e8f4ff}
+.logo-ver{font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-top:2px}
+
+.nav{padding:12px 10px;flex:1}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;transition:all 0.15s;font-size:13px;font-weight:500;color:var(--text2);margin-bottom:2px;border:1px solid transparent}
+.nav-item:hover{background:rgba(29,140,248,0.08);color:var(--text);border-color:var(--border)}
+.nav-item.active{background:rgba(29,140,248,0.15);color:var(--accent);border-color:rgba(29,140,248,0.3)}
+.nav-item .icon{font-size:15px;width:18px;text-align:center}
+
+.sidebar-footer{padding:14px 12px;border-top:1px solid var(--border)}
+.ws-badge{display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.2);border-radius:8px;font-size:11px;color:#00e5a0;font-family:var(--font-mono);margin-bottom:10px}
+.ws-dot{width:6px;height:6px;border-radius:50%;background:#00e5a0;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.user-row{display:flex;align-items:center;gap:8px}
+.avatar{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#1d8cf8,#00e5a0);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff}
+.user-info{flex:1}
+.user-name{font-size:12px;font-weight:600;color:#c8d8ea}
+.user-role{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em}
+
+/* Header */
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.page-title{font-size:20px;font-weight:700;color:#e8f4ff;letter-spacing:-0.02em}
+.page-sub{font-size:12px;color:var(--text2);margin-top:3px}
+.time-btns{display:flex;gap:4px}
+.time-btn{padding:6px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--panel);color:var(--text2);transition:all 0.15s;font-family:var(--font-sans)}
+.time-btn.active,.time-btn:hover{background:rgba(29,140,248,0.15);color:var(--accent);border-color:rgba(29,140,248,0.4)}
+
+/* Stat cards */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.stat{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px 20px;position:relative;overflow:hidden;transition:border-color 0.2s}
+.stat:hover{border-color:rgba(29,140,248,0.4)}
+.stat::before{content:'';position:absolute;top:0;right:0;width:80px;height:80px;border-radius:50%;opacity:0.06;transform:translate(20px,-20px)}
+.stat.blue::before{background:#1d8cf8}
+.stat.red::before{background:#ff3b5c}
+.stat.green::before{background:#00e5a0}
+.stat.yellow::before{background:#ffd166}
+.stat-label{font-size:11px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px}
+.stat-value{font-size:28px;font-weight:700;font-family:var(--font-mono);color:#e8f4ff;line-height:1}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:6px}
+.stat-icon{position:absolute;top:18px;right:18px;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px}
+.stat.blue .stat-icon{background:rgba(29,140,248,0.12);color:#1d8cf8}
+.stat.red .stat-icon{background:rgba(255,59,92,0.12);color:#ff3b5c}
+.stat.green .stat-icon{background:rgba(0,229,160,0.12);color:#00e5a0}
+.stat.yellow .stat-icon{background:rgba(255,209,102,0.12);color:#ffd166}
+
+/* Charts row */
+.charts-row{display:grid;grid-template-columns:1fr 320px;gap:14px;margin-bottom:20px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:20px}
+.panel-title{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.panel-title span{color:var(--text3)}
+
+/* SVG chart */
+.chart-area{position:relative}
+.chart-svg{width:100%;overflow:visible}
+.chart-axis text{font-size:9px;fill:var(--text3);font-family:var(--font-mono)}
+.chart-legend{display:flex;gap:16px;margin-top:12px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text3);font-family:var(--font-mono)}
+.legend-dot{width:8px;height:3px;border-radius:2px}
+
+/* Severity donut */
+.donut-wrap{display:flex;align-items:center;gap:20px}
+.donut-svg{flex-shrink:0}
+.donut-list{flex:1}
+.donut-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;font-size:11px}
+.donut-label{display:flex;align-items:center;gap:6px;color:var(--text2)}
+.donut-swatch{width:10px;height:10px;border-radius:3px}
+.donut-count{font-family:var(--font-mono);color:var(--text);font-weight:600}
+
+/* Bottom row */
+.bottom-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+/* Alert items */
+.alert-item{display:flex;gap:12px;padding:10px 12px;background:var(--panel2);border-radius:10px;border-left:3px solid var(--border);margin-bottom:8px;transition:all 0.15s;cursor:pointer}
+.alert-item:hover{border-left-color:var(--accent);background:rgba(29,140,248,0.06)}
+.alert-item.CRITICAL{border-left-color:var(--crit)}
+.alert-item.HIGH{border-left-color:var(--high)}
+.alert-item.MEDIUM{border-left-color:var(--med)}
+.alert-bar{width:3px;border-radius:2px;flex-shrink:0;min-height:40px}
+.alert-body{flex:1;min-width:0}
+.alert-top{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.alert-title{font-size:12px;font-weight:600;color:#c8d8ea;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.alert-meta{font-size:10px;color:var(--text3);font-family:var(--font-mono)}
+.alert-time{font-size:10px;color:var(--text3);font-family:var(--font-mono);flex-shrink:0;margin-left:auto}
+
+/* Severity badges */
+.badge{padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:0.04em;font-family:var(--font-mono)}
+.badge.CRITICAL{background:rgba(255,59,92,0.15);color:#ff3b5c;border:1px solid rgba(255,59,92,0.3)}
+.badge.HIGH{background:rgba(255,140,66,0.15);color:#ff8c42;border:1px solid rgba(255,140,66,0.3)}
+.badge.MEDIUM{background:rgba(255,209,102,0.15);color:#ffd166;border:1px solid rgba(255,209,102,0.3)}
+.badge.LOW{background:rgba(29,140,248,0.15);color:#1d8cf8;border:1px solid rgba(29,140,248,0.3)}
+.badge.INFO{background:rgba(90,122,154,0.2);color:#5a7a9a;border:1px solid rgba(90,122,154,0.3)}
+.badge.WARNING{background:rgba(255,209,102,0.15);color:#ffd166;border:1px solid rgba(255,209,102,0.3)}
+.badge.ERROR{background:rgba(255,59,92,0.12);color:#ff3b5c;border:1px solid rgba(255,59,92,0.25)}
+
+/* Log table */
+.log-row{display:grid;grid-template-columns:90px 70px 80px 1fr 60px;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer;font-family:var(--font-mono);font-size:10px;transition:background 0.1s;align-items:center}
+.log-row:hover{background:rgba(29,140,248,0.06)}
+.log-row.anomaly{background:rgba(255,209,102,0.04);border-left:2px solid rgba(255,209,102,0.4)}
+.log-row.error{background:rgba(255,59,92,0.04)}
+.log-ts{color:var(--text3)}
+.log-lvl{font-weight:700}
+.log-src{color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.log-msg{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.log-score{text-align:right}
+.log-header{display:grid;grid-template-columns:90px 70px 80px 1fr 60px;gap:8px;padding:5px 8px;font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);border-bottom:1px solid var(--border);margin-bottom:4px;font-family:var(--font-sans)}
+
+/* Live indicator */
+.live-badge{display:flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.25);border-radius:20px;font-size:10px;font-family:var(--font-mono);color:#00e5a0}
+.live-dot{width:5px;height:5px;border-radius:50%;background:#00e5a0;animation:pulse 1.5s infinite}
+
+/* Source bars */
+.src-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.src-name{font-size:11px;color:var(--text2);width:80px;flex-shrink:0;font-family:var(--font-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.src-bar-wrap{flex:1;height:6px;background:rgba(29,140,248,0.08);border-radius:3px;overflow:hidden}
+.src-bar{height:100%;border-radius:3px;background:linear-gradient(90deg,#1d8cf8,#00e5a0);transition:width 1s ease}
+.src-count{font-size:10px;font-family:var(--font-mono);color:var(--text3);width:35px;text-align:right}
+
+/* IP threat table */
+.ip-row{display:grid;grid-template-columns:130px 60px 60px 1fr;gap:10px;padding:6px 8px;border-radius:6px;font-size:11px;align-items:center}
+.ip-row:hover{background:rgba(29,140,248,0.05)}
+.ip-addr{font-family:var(--font-mono);color:var(--text)}
+.risk-bar{height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
+.risk-fill{height:100%;border-radius:2px;transition:width 1s ease}
+.risk-low{background:#00e5a0}
+.risk-med{background:#ffd166}
+.risk-high{background:#ff3b5c}
+
+/* Tabs */
+.tabs{display:flex;gap:2px;background:var(--panel);padding:4px;border-radius:10px;width:fit-content;margin-bottom:16px;border:1px solid var(--border)}
+.tab{padding:6px 16px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.15s;color:var(--text2);border:1px solid transparent}
+.tab.active,.tab:hover{background:rgba(29,140,248,0.15);color:var(--accent);border-color:rgba(29,140,248,0.3)}
+
+/* Search */
+.search-bar{display:flex;gap:10px;margin-bottom:12px}
+.search-input{flex:1;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:8px 12px 8px 36px;font-size:12px;color:var(--text);font-family:var(--font-sans);outline:none;transition:border-color 0.2s}
+.search-input:focus{border-color:var(--accent)}
+.search-wrap{position:relative;flex:1}
+.search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--text3)}
+.filter-btn{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:11px;color:var(--text2);cursor:pointer;white-space:nowrap;font-family:var(--font-sans);transition:all 0.15s}
+.filter-btn:hover,.filter-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(29,140,248,0.08)}
+
+/* Section scroll */
+.scroll-area{max-height:280px;overflow-y:auto}
+.scroll-area::-webkit-scrollbar{width:3px}
+.scroll-area::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* Empty state */
+.empty{text-align:center;padding:30px;color:var(--text3);font-size:12px}
+
+/* Animations */
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn 0.3s ease-out}
+@keyframes slideIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+
+/* Page sections */
+.page{display:none}
+.page.active{display:block;animation:fadeIn 0.25s ease-out}
+
+/* AI Analysis box */
+.ai-box{background:linear-gradient(135deg,rgba(0,229,160,0.06),rgba(29,140,248,0.06));border:1px solid rgba(0,229,160,0.2);border-radius:12px;padding:16px;margin-top:12px}
+.ai-title{font-size:10px;font-weight:700;color:#00e5a0;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.ai-text{font-size:11px;color:var(--text);line-height:1.6}
+.ai-step{display:flex;gap:8px;margin-bottom:6px;font-size:11px}
+.ai-num{color:var(--accent);font-family:var(--font-mono);font-weight:700;flex-shrink:0}
+
+/* Ingest form */
+.ingest-form{display:flex;flex-direction:column;gap:12px}
+.label{font-size:11px;color:var(--text2);margin-bottom:4px;font-weight:500}
+.inp{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:9px 13px;font-size:12px;color:var(--text);font-family:var(--font-sans);outline:none;transition:border-color 0.2s;width:100%}
+.inp:focus{border-color:var(--accent)}
+textarea.inp{resize:vertical;font-family:var(--font-mono);font-size:11px}
+select.inp{cursor:pointer}
+.btn{padding:9px 18px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;border:none;font-family:var(--font-sans)}
+.btn-primary{background:linear-gradient(135deg,#1d8cf8,#0066cc);color:#fff;box-shadow:0 4px 15px rgba(29,140,248,0.25)}
+.btn-primary:hover{background:linear-gradient(135deg,#2d9cf8,#1d8cf8);transform:translateY(-1px)}
+.btn-sec{background:var(--panel2);border:1px solid var(--border);color:var(--text2)}
+.btn-sec:hover{border-color:var(--accent);color:var(--accent)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.success-box{background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.25);border-radius:10px;padding:14px;margin-top:8px;display:none}
+.success-box.show{display:block;animation:fadeIn 0.3s ease-out}
+
+/* System health */
+.health-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+.health-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px}
+.health-card-title{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.health-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:11px}
+.health-label{color:var(--text2)}
+.health-val{font-family:var(--font-mono);font-weight:600;color:var(--text)}
+.health-val.good{color:#00e5a0}
+.health-val.warn{color:#ffd166}
+.health-val.bad{color:#ff3b5c}
+.status-banner{display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.2);border-radius:10px;margin-bottom:20px}
+.status-dot{width:8px;height:8px;border-radius:50%;background:#00e5a0;animation:pulse 2s infinite;flex-shrink:0}
+
+/* User table */
+.table{width:100%;border-collapse:collapse;font-size:11px}
+.table th{text-align:left;padding:8px 12px;color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:0.07em;border-bottom:1px solid var(--border);font-weight:600}
+.table td{padding:10px 12px;border-bottom:1px solid rgba(30,90,160,0.1)}
+.table tr:hover td{background:rgba(29,140,248,0.04)}
+
+/* Tooltip for chart */
+.chart-tooltip{position:absolute;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:10px;font-family:var(--font-mono);pointer-events:none;display:none;z-index:10}
+</style>
+</head>
+<body>
+
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon">🛡️</div>
+      <div class="logo-name">LogForge</div>
+      <div class="logo-ver">v1.0.0 · Enterprise</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" onclick="showPage('dashboard')">
+        <span class="icon">📊</span> Dashboard
+      </div>
+      <div class="nav-item" onclick="showPage('logs')">
+        <span class="icon">📋</span> Live Logs
+      </div>
+      <div class="nav-item" onclick="showPage('alerts')">
+        <span class="icon">🔔</span> Alerts
+      </div>
+      <div class="nav-item" onclick="showPage('analytics')">
+        <span class="icon">📈</span> Analytics
+      </div>
+      <div class="nav-item" onclick="showPage('ingest')">
+        <span class="icon">⬆️</span> Ingest
+      </div>
+      <div class="nav-item" onclick="showPage('system')">
+        <span class="icon">⚙️</span> System
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="ws-badge">
+        <span class="ws-dot"></span>
+        LIVE · <span id="live-count">0</span> events
+      </div>
+      <div class="user-row">
+        <div class="avatar">A</div>
+        <div class="user-info">
+          <div class="user-name">admin</div>
+          <div class="user-role">Administrator</div>
+        </div>
+        <span style="color:var(--text3);font-size:16px;cursor:pointer" title="Logout">↩</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- ═══════════ DASHBOARD ═══════════ -->
+    <section class="page active" id="page-dashboard">
+      <div class="header">
+        <div>
+          <div class="page-title">Security Overview</div>
+          <div class="page-sub">Real-time log monitoring &amp; AI threat detection</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="live-badge"><span class="live-dot"></span>LIVE STREAM</div>
+          <div class="time-btns">
+            <button class="time-btn active" onclick="setHours(this,6)">6h</button>
+            <button class="time-btn" onclick="setHours(this,24)">1d</button>
+            <button class="time-btn" onclick="setHours(this,168)">7d</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat blue">
+          <div class="stat-icon">📄</div>
+          <div class="stat-label">Total Logs</div>
+          <div class="stat-value" id="stat-logs">200</div>
+          <div class="stat-sub">Last 24 hours</div>
+        </div>
+        <div class="stat red">
+          <div class="stat-icon">🔔</div>
+          <div class="stat-label">Active Alerts</div>
+          <div class="stat-value" id="stat-alerts">3</div>
+          <div class="stat-sub">3 unresolved</div>
+        </div>
+        <div class="stat yellow">
+          <div class="stat-icon">⚡</div>
+          <div class="stat-label">Anomalies</div>
+          <div class="stat-value" id="stat-anomalies">47</div>
+          <div class="stat-sub">AI detected</div>
+        </div>
+        <div class="stat green">
+          <div class="stat-icon">🌐</div>
+          <div class="stat-label">Unique IPs</div>
+          <div class="stat-value" id="stat-ips">12</div>
+          <div class="stat-sub">Distinct sources</div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="charts-row">
+        <!-- Timeline -->
+        <div class="panel">
+          <div class="panel-title">📊 Log Volume Timeline <span>(last 24h · 1h buckets)</span></div>
+          <div class="chart-area">
+            <svg class="chart-svg" viewBox="0 0 580 160" id="timeline-chart">
+              <defs>
+                <linearGradient id="gBlue" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#1d8cf8" stop-opacity="0.3"/>
+                  <stop offset="100%" stop-color="#1d8cf8" stop-opacity="0"/>
+                </linearGradient>
+                <linearGradient id="gRed" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#ff3b5c" stop-opacity="0.25"/>
+                  <stop offset="100%" stop-color="#ff3b5c" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <!-- Y-axis lines -->
+              <line x1="40" y1="10" x2="570" y2="10" stroke="rgba(30,90,160,0.15)" stroke-width="1"/>
+              <line x1="40" y1="50" x2="570" y2="50" stroke="rgba(30,90,160,0.15)" stroke-width="1"/>
+              <line x1="40" y1="90" x2="570" y2="90" stroke="rgba(30,90,160,0.15)" stroke-width="1"/>
+              <line x1="40" y1="130" x2="570" y2="130" stroke="rgba(30,90,160,0.15)" stroke-width="1"/>
+              <text x="30" y="13" text-anchor="end" class="chart-axis">40</text>
+              <text x="30" y="53" text-anchor="end" class="chart-axis">30</text>
+              <text x="30" y="93" text-anchor="end" class="chart-axis">20</text>
+              <text x="30" y="133" text-anchor="end" class="chart-axis">10</text>
+              <!-- chart will be drawn by JS -->
+              <g id="chart-content"></g>
+            </svg>
+            <div class="chart-tooltip" id="chart-tip"></div>
+          </div>
+          <div class="chart-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#1d8cf8"></div>Total</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ff3b5c"></div>Errors</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ffd166;height:2px;border-top:2px dashed #ffd166;background:none"></div>Anomalies</div>
+          </div>
+        </div>
+
+        <!-- Severity donut -->
+        <div class="panel">
+          <div class="panel-title">🎯 Severity Breakdown</div>
+          <div class="donut-wrap">
+            <svg class="donut-svg" width="110" height="110" viewBox="0 0 110 110" id="donut-svg">
+              <circle cx="55" cy="55" r="40" fill="none" stroke="rgba(30,90,160,0.1)" stroke-width="16"/>
+              <!-- segments drawn by JS -->
+            </svg>
+            <div class="donut-list" id="donut-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom row -->
+      <div class="bottom-row">
+        <!-- Active Alerts -->
+        <div class="panel">
+          <div class="panel-title">🚨 Active Alerts <span id="alert-count-label"></span></div>
+          <div class="scroll-area" id="dashboard-alerts"></div>
+        </div>
+        <!-- Recent Logs -->
+        <div class="panel">
+          <div class="panel-title">📋 Recent Log Stream</div>
+          <div class="log-header">
+            <span>Timestamp</span><span>Level</span><span>Source</span><span>Message</span><span>Score</span>
+          </div>
+          <div class="scroll-area" id="recent-logs"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ LOGS ═══════════ -->
+    <section class="page" id="page-logs">
+      <div class="header">
+        <div>
+          <div class="page-title">Log Stream</div>
+          <div class="page-sub" id="logs-sub">Showing recent events</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="filter-btn active" id="live-toggle" onclick="toggleLive()">⚡ Live</button>
+          <button class="filter-btn" onclick="exportCsv()">⬇ Export CSV</button>
+        </div>
+      </div>
+      <div class="search-bar">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input class="search-input" type="text" placeholder="Search messages, IPs, users..." id="log-search" oninput="filterLogs()"/>
+        </div>
+        <select class="filter-btn" id="level-filter" onchange="filterLogs()" style="font-size:11px">
+          <option value="">ALL LEVELS</option>
+          <option value="DEBUG">DEBUG</option>
+          <option value="INFO">INFO</option>
+          <option value="WARNING">WARNING</option>
+          <option value="ERROR">ERROR</option>
+          <option value="CRITICAL">CRITICAL</option>
+        </select>
+        <select class="filter-btn" id="source-filter" onchange="filterLogs()" style="font-size:11px">
+          <option value="">ALL SOURCES</option>
+          <option value="nginx">nginx</option>
+          <option value="sshd">sshd/auth</option>
+          <option value="application">application</option>
+        </select>
+        <button class="filter-btn" id="anomaly-filter" onclick="toggleAnomalyFilter()" style="font-size:11px">⚡ Anomalies</button>
+      </div>
+      <div class="panel" style="padding:14px">
+        <div class="log-header">
+          <span>Timestamp</span><span>Level</span><span>Source</span><span>Message</span><span>Score</span>
+        </div>
+        <div class="scroll-area" style="max-height:480px" id="logs-table"></div>
+      </div>
+    </section>
+
+    <!-- ═══════════ ALERTS ═══════════ -->
+    <section class="page" id="page-alerts">
+      <div class="header">
+        <div>
+          <div class="page-title">Alerts &amp; Incidents</div>
+          <div class="page-sub">AI-powered threat detection &amp; incident management</div>
+        </div>
+        <button class="btn btn-primary" onclick="showCreateAlert()">+ New Alert</button>
+      </div>
+
+      <div id="create-alert-form" style="display:none" class="panel fade-in" style="margin-bottom:16px">
+        <div class="panel-title">➕ Create Manual Alert</div>
+        <div class="grid-2">
+          <div>
+            <div class="label">Title *</div>
+            <input class="inp" type="text" id="new-alert-title" placeholder="Alert title"/>
+          </div>
+          <div>
+            <div class="label">Severity</div>
+            <select class="inp" id="new-alert-severity">
+              <option>LOW</option><option selected>MEDIUM</option><option>HIGH</option><option>CRITICAL</option>
+            </select>
+          </div>
+          <div class="grid-2" style="grid-column:span 2">
+            <div>
+              <div class="label">Description</div>
+              <input class="inp" type="text" id="new-alert-desc" placeholder="What happened..."/>
+            </div>
+            <div>
+              <div class="label">Type</div>
+              <input class="inp" type="text" id="new-alert-type" value="manual"/>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-primary" onclick="createAlert()">Create Alert</button>
+          <button class="btn btn-sec" onclick="document.getElementById('create-alert-form').style.display='none'">Cancel</button>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
+        <button class="filter-btn active" onclick="filterAlerts('ALL',this)">ALL</button>
+        <button class="filter-btn" onclick="filterAlerts('CRITICAL',this)">CRITICAL</button>
+        <button class="filter-btn" onclick="filterAlerts('HIGH',this)">HIGH</button>
+        <button class="filter-btn" onclick="filterAlerts('MEDIUM',this)">MEDIUM</button>
+        <button class="filter-btn" onclick="filterAlerts('LOW',this)">LOW</button>
+        <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);cursor:pointer;margin-left:auto">
+          <input type="checkbox" id="show-resolved" onchange="renderAlerts()"> Show Resolved
+        </label>
+      </div>
+      <div id="alerts-list"></div>
+    </section>
+
+    <!-- ═══════════ ANALYTICS ═══════════ -->
+    <section class="page" id="page-analytics">
+      <div class="header">
+        <div>
+          <div class="page-title">Analytics &amp; Intelligence</div>
+          <div class="page-sub">Traffic patterns, IP reputation &amp; source analysis</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+        <!-- Top IPs -->
+        <div class="panel">
+          <div class="panel-title">🌐 Top IP Addresses</div>
+          <div class="log-header" style="grid-template-columns:130px 60px 60px 1fr;gap:10px">
+            <span>IP Address</span><span>Requests</span><span>Errors</span><span>Risk Level</span>
+          </div>
+          <div id="top-ips"></div>
+        </div>
+        <!-- Source breakdown -->
+        <div class="panel">
+          <div class="panel-title">📡 Log Sources Volume</div>
+          <div id="sources-chart"></div>
+        </div>
+      </div>
+      <!-- IP checker -->
+      <div class="panel">
+        <div class="panel-title">🔒 IP Reputation Checker</div>
+        <div style="display:flex;gap:10px;margin-bottom:12px">
+          <div class="search-wrap" style="max-width:300px">
+            <span class="search-icon">🌐</span>
+            <input class="search-input" id="ip-check-input" type="text" placeholder="192.168.1.1" style="font-family:var(--font-mono)"/>
+          </div>
+          <button class="btn btn-primary" onclick="checkIp()">Check IP</button>
+        </div>
+        <div id="ip-result"></div>
+      </div>
+    </section>
+
+    <!-- ═══════════ INGEST ═══════════ -->
+    <section class="page" id="page-ingest">
+      <div class="header">
+        <div>
+          <div class="page-title">Log Ingestion</div>
+          <div class="page-sub">Upload files or send logs via API</div>
+        </div>
+      </div>
+      <div class="tabs">
+        <div class="tab active" onclick="setIngestTab('upload',this)">📁 File Upload</div>
+        <div class="tab" onclick="setIngestTab('single',this)">➤ Single Log</div>
+        <div class="tab" onclick="setIngestTab('bulk',this)">📝 Bulk Text</div>
+        <div class="tab" onclick="setIngestTab('api',this)">⟨/⟩ API Docs</div>
+      </div>
+
+      <!-- Upload tab -->
+      <div id="tab-upload" class="ingest-tab">
+        <div style="border:2px dashed var(--border);border-radius:16px;padding:60px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--panel)" id="drop-zone" onclick="document.getElementById('file-inp').click()" ondragover="event.preventDefault();this.style.borderColor='#1d8cf8'" ondragleave="this.style.borderColor=''" ondrop="handleFileDrop(event)">
+          <div style="font-size:40px;margin-bottom:12px">📂</div>
+          <div style="font-size:15px;font-weight:600;color:#c8d8ea;margin-bottom:6px">Drop log file here or click to browse</div>
+          <div style="font-size:12px;color:var(--text3)">Supports: .log · .txt · .json — Auto-detects nginx, auth, syslog, JSON formats</div>
+          <input type="file" id="file-inp" accept=".log,.txt,.json" style="display:none" onchange="handleFileSelect(event)"/>
+        </div>
+        <div class="success-box" id="upload-result">
+          <div style="color:#00e5a0;font-weight:600;margin-bottom:8px">✅ Upload Successful</div>
+          <div id="upload-details" style="font-size:12px;color:var(--text);font-family:var(--font-mono)"></div>
+        </div>
+        <div style="margin-top:20px">
+          <div class="panel-title">📋 Supported Log Formats</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px">
+            ${['Nginx Access Log','Linux Auth/SSH','Syslog RFC 3164','Docker Container','JSON Structured','Plain Text (auto)'].map((n,i)=>
+              `<div style="background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px">
+                <div style="font-size:10px;font-weight:600;color:${['#00e5a0','#1d8cf8','#ffd166','#ff8c42','#c084fc','#5a7a9a'][i]};margin-bottom:4px">${n}</div>
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>
+
+      <!-- Single tab -->
+      <div id="tab-single" class="ingest-tab" style="display:none">
+        <div class="panel" style="max-width:700px">
+          <div class="panel-title">➤ Send Single Log Entry</div>
+          <div class="ingest-form">
+            <div>
+              <div class="label">Log Message *</div>
+              <textarea class="inp" id="single-msg" rows="4" placeholder="192.168.1.1 - - [15/Jan/2025:10:23:41 +0000] &quot;GET /api HTTP/1.1&quot; 200 1234"></textarea>
+            </div>
+            <div class="grid-2">
+              <div><div class="label">Source Name</div><input class="inp" id="single-source" value="api"/></div>
+              <div><div class="label">Source Type</div>
+                <select class="inp" id="single-type">
+                  <option>application</option><option>nginx</option><option>auth</option><option>docker</option><option>json</option>
+                </select>
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="sendSingleLog()" style="width:fit-content">➤ Send Log Entry</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bulk tab -->
+      <div id="tab-bulk" class="ingest-tab" style="display:none">
+        <div class="panel">
+          <div class="panel-title">📝 Paste Multiple Log Lines</div>
+          <div style="display:flex;gap:8px;margin-bottom:8px">
+            <button class="btn btn-sec" onclick="loadSample('nginx')" style="font-size:11px">Load nginx sample</button>
+            <button class="btn btn-sec" onclick="loadSample('auth')" style="font-size:11px">Load auth sample</button>
+            <button class="btn btn-sec" onclick="loadSample('json')" style="font-size:11px">Load JSON sample</button>
+          </div>
+          <textarea class="inp" id="bulk-text" rows="10" placeholder="Paste log lines here, one per line..."></textarea>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
+            <span style="font-size:11px;color:var(--text3)" id="bulk-count">0 lines</span>
+            <button class="btn btn-primary" onclick="sendBulkLogs()" style="margin-left:auto">⬆ Ingest All</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- API tab -->
+      <div id="tab-api" class="ingest-tab" style="display:none">
+        <div class="panel" style="max-width:800px">
+          <div class="panel-title">⟨/⟩ REST API Reference</div>
+          <p style="font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.7">
+            Authenticate with <code style="color:var(--accent);background:var(--panel2);padding:1px 5px;border-radius:4px">/api/auth/login</code> to get a JWT token, then include it in all requests.
+          </p>
+          ${[
+            {method:'POST',path:'/api/ingest/single',desc:'Single log entry',body:`{
+  "message": "Error: disk full on /var",
+  "source": "my-app",
+  "source_type": "application",
+  "source_host": "server-01"
+}`},
+            {method:'POST',path:'/api/ingest/bulk',desc:'Multiple log lines',body:`{
+  "logs": ["log line 1", "log line 2"],
+  "source": "nginx-prod",
+  "source_type": "nginx"
+}`},
+            {method:'POST',path:'/api/ingest/upload',desc:'File upload',body:`# curl multipart upload
+curl -X POST /api/ingest/upload \\
+  -H "Authorization: Bearer TOKEN" \\
+  -F "file=@/var/log/nginx/access.log"`},
+          ].map(e=>`
+          <div style="background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <span style="background:rgba(0,229,160,0.15);color:#00e5a0;padding:2px 8px;border-radius:4px;font-size:10px;font-family:var(--font-mono);font-weight:700">${e.method}</span>
+              <code style="color:var(--accent);font-size:12px;font-family:var(--font-mono)">${e.path}</code>
+              <span style="color:var(--text3);font-size:11px">${e.desc}</span>
+            </div>
+            <pre style="font-size:10px;color:var(--text);font-family:var(--font-mono);background:var(--bg);padding:10px;border-radius:6px;overflow-x:auto;line-height:1.5">${e.body}</pre>
+          </div>`).join('')}
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ SYSTEM ═══════════ -->
+    <section class="page" id="page-system">
+      <div class="header">
+        <div>
+          <div class="page-title">System Health</div>
+          <div class="page-sub">Platform status, log sources &amp; user management</div>
+        </div>
+        <button class="btn btn-sec" onclick="loadSystemData()" style="font-size:12px">↻ Refresh</button>
+      </div>
+      <div class="status-banner">
+        <span class="status-dot"></span>
+        <span style="font-weight:600;color:#00e5a0">LogForge Platform Operational</span>
+        <span style="font-size:11px;color:var(--text3);margin-left:8px" id="sys-timestamp"></span>
+      </div>
+      <div class="health-grid">
+        <div class="health-card">
+          <div class="health-card-title">🗄️ Database</div>
+          <div class="health-row"><span class="health-label">Total Logs</span><span class="health-val good" id="sys-logs">200</span></div>
+          <div class="health-row"><span class="health-label">Active Alerts</span><span class="health-val warn" id="sys-alerts">3</span></div>
+          <div class="health-row"><span class="health-label">Storage</span><span class="health-val good">SQLite 3.x</span></div>
+        </div>
+        <div class="health-card">
+          <div class="health-card-title">⚙️ Log Processor</div>
+          <div class="health-row"><span class="health-label">Processed Total</span><span class="health-val good" id="sys-processed">200</span></div>
+          <div class="health-row"><span class="health-label">Queue Size</span><span class="health-val good">0</span></div>
+          <div class="health-row"><span class="health-label">ML Model</span><span class="health-val warn">Training...</span></div>
+        </div>
+        <div class="health-card">
+          <div class="health-card-title">🌐 Network</div>
+          <div class="health-row"><span class="health-label">WS Connections</span><span class="health-val good" id="sys-ws">1</span></div>
+          <div class="health-row"><span class="health-label">Ingest Rate</span><span class="health-val good">~8/min</span></div>
+          <div class="health-row"><span class="health-label">Uptime</span><span class="health-val good">99.9%</span></div>
+        </div>
+      </div>
+      <!-- Log sources table -->
+      <div class="panel" style="margin-bottom:16px">
+        <div class="panel-title">📡 Active Log Sources</div>
+        <table class="table">
+          <thead><tr><th>Source</th><th>Type</th><th>Host</th><th>Log Count</th><th>Last Seen</th></tr></thead>
+          <tbody id="sources-table"></tbody>
+        </table>
+      </div>
+      <!-- User management -->
+      <div class="panel">
+        <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center">
+          <span>👥 User Management</span>
+          <button class="btn btn-primary" style="font-size:11px;padding:5px 12px" onclick="showAddUserForm()">+ Add User</button>
+        </div>
+        <div id="add-user-form" style="display:none;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px">
+          <div class="grid-2">
+            <div><div class="label">Username</div><input class="inp" id="new-uname" placeholder="username"/></div>
+            <div><div class="label">Email</div><input class="inp" id="new-email" placeholder="user@company.com"/></div>
+            <div><div class="label">Password</div><input class="inp" type="password" id="new-pass" placeholder="••••••••"/></div>
+            <div><div class="label">Role</div><select class="inp" id="new-role"><option>admin</option><option selected>analyst</option><option>viewer</option></select></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="btn btn-primary" onclick="addUser()" style="font-size:11px">Create User</button>
+            <button class="btn btn-sec" onclick="document.getElementById('add-user-form').style.display='none'" style="font-size:11px">Cancel</button>
+          </div>
+        </div>
+        <table class="table">
+          <thead><tr><th>Username</th><th>Email</th><th>Role</th><th>Created</th></tr></thead>
+          <tbody id="users-table"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+//  LogForge Demo — Full standalone dashboard with simulated real-time data
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── State ──────────────────────────────────────────────────────────────────
+const state = {
+  currentPage: 'dashboard',
+  liveEnabled: true,
+  anomalyFilterOn: false,
+  liveCount: 0,
+  alertFilter: 'ALL',
+  hours: 6,
+  logs: [],
+  alerts: [],
+  users: [
+    {username:'admin',email:'admin@logforge.local',role:'admin',created:'2025-01-01'},
+    {username:'analyst',email:'analyst@logforge.local',role:'analyst',created:'2025-01-01'},
+  ],
+}
+
+// ── Sample data generators ────────────────────────────────────────────────
+const IPS = ['192.168.1.45','10.0.0.23','203.0.113.99','172.16.0.5','198.51.100.77','10.0.1.100']
+const SOURCES = ['nginx','sshd','app-api','worker','monitor']
+const MSGS = {
+  nginx: ['GET /api/users → 200','POST /api/auth/login → 401','GET /admin/config → 403','GET /health → 200','POST /api/data → 500'],
+  sshd: ['Failed password for invalid user admin from 203.0.113.45','Accepted password for deploy from 10.0.0.10','Failed password for root from 198.51.100.77','Invalid user webmaster from 203.0.113.99'],
+  'app-api': ['Database query timeout after 30s','User login successful: alice','Rate limit approaching for IP','Payment processing failed: gateway timeout'],
+  worker: ['High memory usage: 87%','Job completed: cleanup_sessions','Queue processing paused: disk full','Task failed: external API unreachable'],
+  monitor: ['SSL certificate expires in 7 days','Disk space critical: 97%','CPU spike detected: 94%','Service restart: nginx'],
+}
+const LEVELS = {nginx:['INFO','WARNING','ERROR'],sshd:['WARNING','INFO','WARNING'],
+  'app-api':['ERROR','INFO','WARNING','ERROR'],'worker':['WARNING','INFO','ERROR'],'monitor':['WARNING','CRITICAL','ERROR']}
+
+function randOf(arr){return arr[Math.floor(Math.random()*arr.length)]}
+function randInt(a,b){return Math.floor(Math.random()*(b-a+1))+a}
+function now(){return new Date()}
+
+function genLog(){
+  const src = randOf(SOURCES)
+  const msgs = MSGS[src]
+  const msg = randOf(msgs)
+  const levels = LEVELS[src]
+  const lvl = randOf(levels)
+  const ip = randOf(IPS)
+  const isAnom = ['CRITICAL','ERROR'].includes(lvl) && Math.random()>0.6
+  const score = isAnom ? (0.5+Math.random()*0.5).toFixed(2) : (Math.random()*0.3).toFixed(2)
+  return {
+    id: Date.now()+Math.random(),
+    timestamp: new Date().toISOString(),
+    source:src, log_level:lvl, parsed_message:msg,
+    ip_address:ip, is_anomaly:isAnom, anomaly_score:parseFloat(score),
+    severity_score: isAnom?randInt(5,10):randInt(0,4),
+    source_type: src==='nginx'?'nginx':src==='sshd'?'auth':'application',
+    raw_message:`[${lvl}] ${src}: ${msg} from ${ip}`
+  }
+}
+
+// Seed initial logs
+for(let i=0;i<80;i++){
+  const log = genLog()
+  const minsAgo = randInt(0,1440)
+  log.timestamp = new Date(Date.now()-minsAgo*60000).toISOString()
+  state.logs.unshift(log)
+}
+state.logs.sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp))
+
+// Seed initial alerts
+state.alerts = [
+  {id:1,title:'Brute Force Attack from 203.0.113.45',severity:'HIGH',alert_type:'brute_force',
+   ip_address:'203.0.113.45',event_count:47,triggered_at:new Date(Date.now()-25*60000).toISOString(),
+   is_resolved:false,confidence_score:0.92,description:'47 failed login attempts in 5 minutes',
+   ai_analysis:'IP 203.0.113.45 is conducting automated brute-force attacks against SSH. Pattern shows sequential ports and common username enumeration.',
+   remediation:'1. Block IP: iptables -A INPUT -s 203.0.113.45 -j DROP\n2. Install fail2ban\n3. Enable MFA for all accounts\n4. Move SSH to non-standard port'},
+  {id:2,title:'Anomaly Spike: 89 Anomalous Events',severity:'MEDIUM',alert_type:'anomaly_spike',
+   event_count:89,triggered_at:new Date(Date.now()-12*60000).toISOString(),
+   is_resolved:false,confidence_score:0.75,description:'Unusual spike in anomalous activity in last 10 minutes',
+   ai_analysis:'Anomalous spike correlates with increased 500 errors and failed auth attempts. May indicate coordinated attack or service degradation.',
+   remediation:'1. Review anomalous logs\n2. Check CPU/memory\n3. Verify DB connectivity\n4. Inspect load balancer'},
+  {id:3,title:'Disk Space Critical: storage-01 at 97%',severity:'CRITICAL',alert_type:'disk_critical',
+   event_count:1,triggered_at:new Date(Date.now()-5*60000).toISOString(),
+   is_resolved:false,confidence_score:1.0,description:'Primary storage node critically low on disk space',
+   ai_analysis:'Storage-01 has only 3% disk space. Services will fail if not addressed immediately.',
+   remediation:'1. du -sh /* | sort -rh | head\n2. logrotate -f /etc/logrotate.conf\n3. docker system prune -af\n4. Add storage capacity'},
+  {id:4,title:'High Error Rate: 67 errors in 10 min',severity:'MEDIUM',alert_type:'high_error_rate',
+   event_count:67,triggered_at:new Date(Date.now()-45*60000).toISOString(),
+   is_resolved:true,confidence_score:0.80,description:'Service error rate exceeded threshold',
+   ai_analysis:'Error spike indicated degraded database connection pool. Resolved by restarting app servers.',
+   remediation:'1. Restart app servers\n2. Check DB connection pool\n3. Review error logs'},
+]
+
+// ── Page navigation ───────────────────────────────────────────────────────
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'))
+  document.getElementById('page-'+name).classList.add('active')
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    if(n.textContent.toLowerCase().includes(name.split('-')[0])||
+       (name==='dashboard'&&n.textContent.includes('Dashboard'))||
+       (name==='logs'&&n.textContent.includes('Logs'))||
+       (name==='alerts'&&n.textContent.includes('Alert'))||
+       (name==='analytics'&&n.textContent.includes('Analytics'))||
+       (name==='ingest'&&n.textContent.includes('Ingest'))||
+       (name==='system'&&n.textContent.includes('System')))
+      n.classList.add('active')
+  })
+  state.currentPage = name
+  if(name==='dashboard')renderDashboard()
+  if(name==='logs')renderLogsPage()
+  if(name==='alerts')renderAlerts()
+  if(name==='analytics')renderAnalytics()
+  if(name==='system')loadSystemData()
+}
+
+// ── Time format helpers ───────────────────────────────────────────────────
+function fmt(ts){
+  const d=new Date(ts)
+  return d.toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit',second:'2-digit'})
+}
+function fmtAgo(ts){
+  const s=Math.floor((Date.now()-new Date(ts))/1000)
+  if(s<60)return `${s}s ago`
+  if(s<3600)return `${Math.floor(s/60)}m ago`
+  return `${Math.floor(s/3600)}h ago`
+}
+function fmtDate(ts){return new Date(ts).toLocaleDateString('en',{month:'short',day:'numeric',year:'numeric'})}
+
+// ── Log level colors ──────────────────────────────────────────────────────
+const LEVEL_COLORS = {CRITICAL:'#ff3b5c',ERROR:'#ff3b5c',WARNING:'#ffd166',INFO:'#1d8cf8',DEBUG:'#5a7a9a'}
+
+// ── Dashboard render ──────────────────────────────────────────────────────
+function renderDashboard(){
+  const cutoff = new Date(Date.now()-state.hours*3600000)
+  const filtered = state.logs.filter(l=>new Date(l.timestamp)>=cutoff)
+  const anomalies = filtered.filter(l=>l.is_anomaly)
+  const errors = filtered.filter(l=>['ERROR','CRITICAL'].includes(l.log_level))
+  const uniqueIps = new Set(filtered.map(l=>l.ip_address)).size
+  const activeAlerts = state.alerts.filter(a=>!a.is_resolved)
+
+  document.getElementById('stat-logs').textContent = filtered.length
+  document.getElementById('stat-alerts').textContent = activeAlerts.length
+  document.getElementById('stat-anomalies').textContent = anomalies.length
+  document.getElementById('stat-ips').textContent = uniqueIps
+
+  renderTimeline(filtered)
+  renderDonut(filtered)
+  renderDashAlerts(activeAlerts)
+  renderRecentLogs(filtered.slice(0,20))
+}
+
+function renderTimeline(logs){
+  const buckets={}
+  logs.forEach(l=>{
+    const d=new Date(l.timestamp)
+    const h=new Date(d.getFullYear(),d.getMonth(),d.getDate(),d.getHours()).getTime()
+    if(!buckets[h])buckets[h]={t:d.getHours()+':00',total:0,errors:0,anomalies:0}
+    buckets[h].total++
+    if(['ERROR','CRITICAL'].includes(l.log_level))buckets[h].errors++
+    if(l.is_anomaly)buckets[h].anomalies++
+  })
+  const data=Object.values(buckets).sort((a,b)=>a.t<b.t?-1:1).slice(-12)
+  if(!data.length){document.getElementById('chart-content').innerHTML='';return}
+
+  const maxV=Math.max(...data.map(d=>d.total),1)
+  const W=530,H=120,PAD_L=40,Y_OFF=10
+  const xStep=W/(data.length-1||1)
+
+  // Build points
+  const totalPts=data.map((d,i)=>`${PAD_L+i*xStep},${Y_OFF+H-(d.total/maxV)*H}`)
+  const errPts=data.map((d,i)=>`${PAD_L+i*xStep},${Y_OFF+H-(d.errors/maxV)*H}`)
+  const anomPts=data.map((d,i)=>`${PAD_L+i*xStep},${Y_OFF+H-(d.anomalies/maxV)*H}`)
+
+  const polyTotal=[...totalPts,`${PAD_L+(data.length-1)*xStep},${Y_OFF+H}`,`${PAD_L},${Y_OFF+H}`].join(' ')
+  const polyErr=[...errPts,`${PAD_L+(data.length-1)*xStep},${Y_OFF+H}`,`${PAD_L},${Y_OFF+H}`].join(' ')
+
+  let html=`
+    <polygon points="${polyTotal}" fill="url(#gBlue)"/>
+    <polyline points="${totalPts.join(' ')}" fill="none" stroke="#1d8cf8" stroke-width="1.5"/>
+    <polygon points="${polyErr}" fill="url(#gRed)"/>
+    <polyline points="${errPts.join(' ')}" fill="none" stroke="#ff3b5c" stroke-width="1.5"/>
+    <polyline points="${anomPts.join(' ')}" fill="none" stroke="#ffd166" stroke-width="1.5" stroke-dasharray="4 2"/>
+  `
+  // X labels
+  data.forEach((d,i)=>{
+    if(i%2===0)html+=`<text x="${PAD_L+i*xStep}" y="${Y_OFF+H+14}" text-anchor="middle" class="chart-axis">${d.t}</text>`
+    // Dots
+    html+=`<circle cx="${PAD_L+i*xStep}" cy="${Y_OFF+H-(data[i].total/maxV)*H}" r="2.5" fill="#1d8cf8"/>`
+  })
+  document.getElementById('chart-content').innerHTML=html
+}
+
+function renderDonut(logs){
+  const by={}
+  logs.forEach(l=>{by[l.log_level]=(by[l.log_level]||0)+1})
+  const colors={CRITICAL:'#ff3b5c',ERROR:'#ff8c42',WARNING:'#ffd166',INFO:'#1d8cf8',DEBUG:'#5a7a9a'}
+  const entries=Object.entries(by).sort((a,b)=>b[1]-a[1])
+  const total=entries.reduce((s,[,v])=>s+v,0)||1
+
+  let offset=0
+  const r=40,cx=55,cy=55,circ=2*Math.PI*r
+  let segs=''
+  entries.forEach(([lvl,cnt])=>{
+    const pct=cnt/total
+    const dash=pct*circ
+    const gap=circ-dash
+    const col=colors[lvl]||'#5a7a9a'
+    segs+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${col}" stroke-width="14"
+      stroke-dasharray="${dash} ${gap}" stroke-dashoffset="${-offset}" transform="rotate(-90,${cx},${cy})" opacity="0.85"/>`
+    offset+=dash
+  })
+  document.getElementById('donut-svg').innerHTML=`
+    <circle cx="55" cy="55" r="40" fill="none" stroke="rgba(30,90,160,0.1)" stroke-width="14"/>
+    ${segs}
+    <text x="55" y="52" text-anchor="middle" font-size="16" font-weight="700" fill="#e8f4ff" font-family="'Space Mono',monospace">${total}</text>
+    <text x="55" y="65" text-anchor="middle" font-size="8" fill="#5a7a9a" font-family="'DM Sans',sans-serif">TOTAL</text>
+  `
+
+  const list=document.getElementById('donut-list')
+  list.innerHTML=entries.slice(0,5).map(([lvl,cnt])=>`
+    <div class="donut-row">
+      <div class="donut-label"><div class="donut-swatch" style="background:${colors[lvl]||'#5a7a9a'}"></div>${lvl}</div>
+      <div class="donut-count">${cnt}</div>
+    </div>`).join('')
+}
+
+function renderDashAlerts(alerts){
+  const el=document.getElementById('dashboard-alerts')
+  document.getElementById('alert-count-label').textContent=alerts.length?' ('+alerts.length+' active)':''
+  if(!alerts.length){el.innerHTML='<div class="empty">🛡️ No active alerts</div>';return}
+  el.innerHTML=alerts.map(a=>`
+    <div class="alert-item ${a.severity}" onclick="showPage('alerts')">
+      <div class="alert-body">
+        <div class="alert-top">
+          <span class="badge ${a.severity}">${a.severity}</span>
+          <span style="font-size:10px;color:var(--text3);font-family:var(--font-mono)">${a.alert_type}</span>
+          <span class="alert-time">${fmtAgo(a.triggered_at)}</span>
+        </div>
+        <div class="alert-title">${a.title}</div>
+        ${a.ip_address?`<div class="alert-meta">IP: ${a.ip_address} · ${a.event_count} events</div>`:''}
+      </div>
+    </div>`).join('')
+}
+
+function renderRecentLogs(logs){
+  const el=document.getElementById('recent-logs')
+  el.innerHTML=logs.map(l=>logRow(l)).join('')
+}
+
+function logRow(l){
+  const clz=l.is_anomaly?'anomaly':['ERROR','CRITICAL'].includes(l.log_level)?'error':''
+  const score=l.anomaly_score>0?l.anomaly_score.toFixed(2):'—'
+  const scoreColor=l.anomaly_score>0.7?'#ff3b5c':l.anomaly_score>0.4?'#ffd166':'#2a4560'
+  return `<div class="log-row ${clz}">
+    <span class="log-ts">${fmt(l.timestamp)}</span>
+    <span class="log-lvl" style="color:${LEVEL_COLORS[l.log_level]||'#c8d8ea'}">${l.log_level}</span>
+    <span class="log-src">${l.source}</span>
+    <span class="log-msg">${l.parsed_message}</span>
+    <span class="log-score" style="color:${scoreColor}">${score}${l.is_anomaly?'⚡':''}</span>
+  </div>`
+}
+
+// ── Logs page ─────────────────────────────────────────────────────────────
+function renderLogsPage(){
+  filterLogs()
+}
+
+function filterLogs(){
+  const search=(document.getElementById('log-search').value||'').toLowerCase()
+  const level=document.getElementById('level-filter').value
+  const src=document.getElementById('source-filter').value
+  const anomOnly=state.anomalyFilterOn
+
+  let filtered=state.logs
+  if(search)filtered=filtered.filter(l=>
+    (l.parsed_message||'').toLowerCase().includes(search)||
+    (l.ip_address||'').includes(search)||
+    (l.source||'').includes(search)
+  )
+  if(level)filtered=filtered.filter(l=>l.log_level===level)
+  if(src)filtered=filtered.filter(l=>l.source===src||l.source_type===src)
+  if(anomOnly)filtered=filtered.filter(l=>l.is_anomaly)
+
+  document.getElementById('logs-sub').textContent=`${filtered.length} logs ${state.liveEnabled?'· LIVE':'· Historic'}`
+  const el=document.getElementById('logs-table')
+  el.innerHTML=filtered.slice(0,200).map(l=>logRow(l)).join('')||'<div class="empty">No logs match current filters</div>'
+}
+
+function toggleLive(){
+  state.liveEnabled=!state.liveEnabled
+  const btn=document.getElementById('live-toggle')
+  btn.classList.toggle('active',state.liveEnabled)
+  btn.textContent=state.liveEnabled?'⚡ Live':'⏸ Paused'
+}
+
+function toggleAnomalyFilter(){
+  state.anomalyFilterOn=!state.anomalyFilterOn
+  document.getElementById('anomaly-filter').classList.toggle('active',state.anomalyFilterOn)
+  filterLogs()
+}
+
+function exportCsv(){
+  const rows=[['timestamp','log_level','source','ip_address','parsed_message','anomaly_score']]
+  state.logs.forEach(l=>rows.push([l.timestamp,l.log_level,l.source,l.ip_address,l.parsed_message,l.anomaly_score]))
+  const csv=rows.map(r=>r.map(v=>`"${(v||'').toString().replace(/"/g,'""')}"`).join(',')).join('\n')
+  const a=document.createElement('a')
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv)
+  a.download=`logforge_${Date.now()}.csv`
+  a.click()
+}
+
+// ── Alerts page ───────────────────────────────────────────────────────────
+function filterAlerts(sev,btn){
+  state.alertFilter=sev
+  document.querySelectorAll('#page-alerts .filter-btn').forEach(b=>b.classList.remove('active'))
+  if(btn)btn.classList.add('active')
+  renderAlerts()
+}
+
+function renderAlerts(){
+  const showResolved=document.getElementById('show-resolved').checked
+  let alerts=state.alerts
+  if(state.alertFilter!=='ALL')alerts=alerts.filter(a=>a.severity===state.alertFilter)
+  if(!showResolved)alerts=alerts.filter(a=>!a.is_resolved)
+
+  const el=document.getElementById('alerts-list')
+  if(!alerts.length){el.innerHTML='<div class="panel"><div class="empty">🛡️ No alerts found</div></div>';return}
+
+  el.innerHTML=alerts.map(a=>`
+    <div class="panel" style="margin-bottom:10px;border-left:4px solid ${
+      {CRITICAL:'#ff3b5c',HIGH:'#ff8c42',MEDIUM:'#ffd166',LOW:'#1d8cf8'}[a.severity]||'var(--border)'
+    }">
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+            <span class="badge ${a.severity}">${a.severity}</span>
+            <span style="font-size:10px;color:var(--accent);background:rgba(29,140,248,0.1);padding:2px 8px;border-radius:4px;font-family:var(--font-mono)">${a.alert_type}</span>
+            ${a.is_resolved?'<span class="badge INFO">✓ RESOLVED</span>':''}
+            <span style="font-size:10px;color:var(--text3);font-family:var(--font-mono);margin-left:auto">${fmtAgo(a.triggered_at)}</span>
+          </div>
+          <div style="font-size:14px;font-weight:600;color:#e8f4ff;margin-bottom:4px">${a.title}</div>
+          <div style="font-size:11px;color:var(--text2)">${a.description}</div>
+          <div style="display:flex;gap:14px;margin-top:6px;font-size:10px;color:var(--text3);font-family:var(--font-mono)">
+            ${a.ip_address?`<span>IP: ${a.ip_address}</span>`:''}
+            ${a.event_count?`<span>${a.event_count} events</span>`:''}
+            ${a.confidence_score?`<span>Confidence: ${(a.confidence_score*100).toFixed(0)}%</span>`:''}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+          ${!a.is_resolved?`
+            <button class="btn btn-sec" onclick="analyzeAlert(${a.id})" style="font-size:10px;padding:5px 10px">🤖 AI Analyze</button>
+            <button onclick="resolveAlert(${a.id})" style="padding:5px 10px;border-radius:6px;font-size:10px;background:rgba(0,229,160,0.1);color:#00e5a0;border:1px solid rgba(0,229,160,0.3);cursor:pointer;font-family:var(--font-sans)">✓ Resolve</button>
+          `:''}
+        </div>
+      </div>
+      ${a.ai_analysis?`
+        <div class="ai-box" style="margin-top:12px">
+          <div class="ai-title">🤖 AI Root Cause Analysis</div>
+          <div class="ai-text" style="margin-bottom:10px">${a.ai_analysis}</div>
+          ${a.remediation?`
+            <div class="ai-title">🔧 Remediation Steps</div>
+            ${a.remediation.split('\n').filter(Boolean).map((s,i)=>`
+              <div class="ai-step"><span class="ai-num">${i+1}.</span><span style="color:var(--text)">${s.replace(/^\d+\.\s*/,'')}</span></div>
+            `).join('')}
+          `:''}
+        </div>
+      `:''}
+    </div>`).join('')
+}
+
+function resolveAlert(id){
+  const a=state.alerts.find(a=>a.id===id)
+  if(a){a.is_resolved=true;a.resolved_at=new Date().toISOString()}
+  renderAlerts()
+  showToast('Alert resolved ✓','#00e5a0')
+}
+
+function analyzeAlert(id){
+  const a=state.alerts.find(a=>a.id===id)
+  if(a&&!a.ai_analysis){
+    a.ai_analysis='Analysis complete. This pattern indicates automated credential stuffing using a known botnet. The sequential port enumeration and common username list matches IOC database entry CVE-2024-XXXX.'
+    a.remediation='1. Immediately block IP at firewall level\n2. Enable account lockout after 3 failures\n3. Rotate all potentially compromised credentials\n4. Enable MFA platform-wide\n5. Report IP to threat intel sharing platform'
+  }
+  renderAlerts()
+  showToast('AI analysis complete 🤖','#1d8cf8')
+}
+
+function showCreateAlert(){
+  const f=document.getElementById('create-alert-form')
+  f.style.display=f.style.display==='none'?'block':'none'
+}
+
+function createAlert(){
+  const title=document.getElementById('new-alert-title').value.trim()
+  if(!title){showToast('Title required','#ff3b5c');return}
+  state.alerts.unshift({
+    id:Date.now(),title,
+    severity:document.getElementById('new-alert-severity').value,
+    alert_type:document.getElementById('new-alert-type').value||'manual',
+    description:document.getElementById('new-alert-desc').value,
+    triggered_at:new Date().toISOString(),is_resolved:false,event_count:1,confidence_score:1.0
+  })
+  document.getElementById('create-alert-form').style.display='none'
+  document.getElementById('new-alert-title').value=''
+  renderAlerts()
+  showToast('Alert created ✓','#00e5a0')
+}
+
+// ── Analytics page ────────────────────────────────────────────────────────
+function renderAnalytics(){
+  renderTopIps()
+  renderSourcesChart()
+}
+
+function renderTopIps(){
+  const ipMap={}
+  state.logs.forEach(l=>{
+    if(!l.ip_address)return
+    if(!ipMap[l.ip_address])ipMap[l.ip_address]={total:0,errors:0}
+    ipMap[l.ip_address].total++
+    if(['ERROR','CRITICAL'].includes(l.log_level))ipMap[l.ip_address].errors++
+  })
+  const sorted=Object.entries(ipMap).sort((a,b)=>b[1].total-a[1].total).slice(0,8)
+  const maxReq=sorted[0]?.[1].total||1
+
+  document.getElementById('top-ips').innerHTML=sorted.map(([ip,d])=>{
+    const risk=Math.min(10,(d.errors*2)/Math.max(d.total,1)*10)
+    const riskLvl=risk>=6?'HIGH':risk>=3?'MEDIUM':'LOW'
+    const riskCls=risk>=6?'risk-high':risk>=3?'risk-med':'risk-low'
+    return `<div class="ip-row">
+      <span class="ip-addr">${ip}</span>
+      <span style="font-family:var(--font-mono);color:var(--accent)">${d.total}</span>
+      <span style="font-family:var(--font-mono);color:${d.errors?'#ff3b5c':'#5a7a9a'}">${d.errors}</span>
+      <div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:2px">
+          <span class="badge ${riskLvl}" style="font-size:9px">${riskLvl}</span>
+        </div>
+        <div class="risk-bar"><div class="${riskCls} risk-fill" style="width:${(d.total/maxReq)*100}%"></div></div>
+      </div>
+    </div>`}).join('')
+}
+
+function renderSourcesChart(){
+  const srcMap={}
+  state.logs.forEach(l=>{srcMap[l.source]=(srcMap[l.source]||0)+1})
+  const sorted=Object.entries(srcMap).sort((a,b)=>b[1]-a[1]).slice(0,8)
+  const max=sorted[0]?.[1]||1
+  const colors=['#1d8cf8','#00e5a0','#ffd166','#ff8c42','#c084fc','#ff3b5c','#38bdf8','#a3e635']
+
+  document.getElementById('sources-chart').innerHTML=sorted.map(([src,cnt],i)=>`
+    <div class="src-row">
+      <span class="src-name">${src}</span>
+      <div class="src-bar-wrap"><div class="src-bar" style="width:${(cnt/max)*100}%;background:${colors[i%colors.length]}"></div></div>
+      <span class="src-count">${cnt}</span>
+    </div>`).join('')
+}
+
+function checkIp(){
+  const ip=document.getElementById('ip-check-input').value.trim()
+  if(!ip){showToast('Enter an IP address','#ff3b5c');return}
+  const logs=state.logs.filter(l=>l.ip_address===ip)
+  const errors=logs.filter(l=>['ERROR','CRITICAL'].includes(l.log_level)).length
+  const warnings=logs.filter(l=>l.log_level==='WARNING').length
+  const total=logs.length
+  const risk=Math.min(10,(errors*2+warnings)/Math.max(total,1)*10)
+  const riskLvl=risk>=6?'HIGH':risk>=3?'MEDIUM':'LOW'
+  const riskColor={'HIGH':'#ff3b5c','MEDIUM':'#ffd166','LOW':'#00e5a0'}[riskLvl]
+
+  document.getElementById('ip-result').innerHTML=`
+    <div style="background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:16px;animation:fadeIn 0.3s ease-out">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <span style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:#e8f4ff">${ip}</span>
+        <span style="padding:5px 12px;border-radius:8px;font-size:12px;font-weight:600;background:${riskColor}20;color:${riskColor};border:1px solid ${riskColor}40">${riskLvl} RISK · ${risk.toFixed(1)}/10</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px">
+        <div style="background:var(--panel);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:22px;font-weight:700;font-family:var(--font-mono);color:#e8f4ff">${total}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px">Total Requests</div>
+        </div>
+        <div style="background:var(--panel);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:22px;font-weight:700;font-family:var(--font-mono);color:#ff3b5c">${errors}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px">Error Events</div>
+        </div>
+        <div style="background:var(--panel);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:22px;font-weight:700;font-family:var(--font-mono);color:#ffd166">${warnings}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px">Warnings</div>
+        </div>
+      </div>
+      ${risk>=6?`<div style="padding:10px 12px;background:rgba(255,59,92,0.08);border:1px solid rgba(255,59,92,0.25);border-radius:8px;font-size:11px;color:#ff3b5c;display:flex;gap:8px">
+        <span>🛡️</span> Suspicious activity detected. Consider blocking this IP or enabling enhanced monitoring.
+      </div>`:'<div style="padding:10px 12px;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.2);border-radius:8px;font-size:11px;color:#00e5a0">✓ IP appears benign based on current activity patterns.</div>'}
+    </div>`
+}
+
+// ── Ingest page ───────────────────────────────────────────────────────────
+function setIngestTab(name,el){
+  document.querySelectorAll('.ingest-tab').forEach(t=>t.style.display='none')
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'))
+  document.getElementById('tab-'+name).style.display='block'
+  if(el)el.classList.add('active')
+}
+
+const SAMPLES={
+  nginx:`192.168.1.45 - - [15/Jan/2025:10:23:41 +0000] "GET /api/users HTTP/1.1" 200 1234 "-" "Mozilla/5.0"
+10.0.0.23 - admin [15/Jan/2025:10:23:42 +0000] "POST /login HTTP/1.1" 401 89 "-" "curl/7.68.0"
+203.0.113.99 - - [15/Jan/2025:10:23:43 +0000] "GET /admin/config HTTP/1.1" 403 45 "-" "Python/3.9"
+172.16.0.5 - - [15/Jan/2025:10:23:44 +0000] "GET /health HTTP/1.1" 200 12 "-" "healthcheck/1.0"`,
+  auth:`Jan 15 10:22:15 webserver sshd[1234]: Failed password for invalid user admin from 203.0.113.45 port 54321 ssh2
+Jan 15 10:22:16 webserver sshd[1234]: Failed password for root from 203.0.113.45 port 54322 ssh2
+Jan 15 10:22:50 webserver sshd[1207]: Accepted password for deploy from 10.0.0.10 port 22 ssh2`,
+  json:`{"timestamp":"2025-01-15T10:23:41Z","level":"ERROR","message":"Database timeout","service":"api"}
+{"timestamp":"2025-01-15T10:23:42Z","level":"INFO","message":"User login successful","user":"alice"}
+{"timestamp":"2025-01-15T10:23:43Z","level":"WARNING","message":"High memory: 87%","service":"worker"}`
+}
+
+function loadSample(type){
+  document.getElementById('bulk-text').value=SAMPLES[type]||''
+  updateBulkCount()
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const ta=document.getElementById('bulk-text')
+  if(ta)ta.addEventListener('input',updateBulkCount)
+})
+
+function updateBulkCount(){
+  const lines=(document.getElementById('bulk-text').value||'').split('\n').filter(l=>l.trim()).length
+  const el=document.getElementById('bulk-count')
+  if(el)el.textContent=lines+' lines'
+}
+
+function handleFileSelect(e){
+  const file=e.target.files[0]
+  if(file)processFile(file)
+}
+function handleFileDrop(e){
+  e.preventDefault()
+  const file=e.dataTransfer.files[0]
+  if(file)processFile(file)
+}
+
+function processFile(file){
+  const reader=new FileReader()
+  reader.onload=e=>{
+    const lines=e.target.result.split('\n').filter(l=>l.trim())
+    lines.forEach(line=>{
+      const log=genLog()
+      log.raw_message=line.slice(0,500)
+      log.parsed_message=line.slice(0,200)
+      log.timestamp=new Date().toISOString()
+      state.logs.unshift(log)
+    })
+    const details=document.getElementById('upload-details')
+    details.textContent=`File: ${file.name} · ${lines.length} lines ingested · Auto-detected format`
+    document.getElementById('upload-result').classList.add('show')
+    showToast(`Ingested ${lines.length} lines from ${file.name}`,'#00e5a0')
+  }
+  reader.readAsText(file)
+}
+
+function sendSingleLog(){
+  const msg=document.getElementById('single-msg').value.trim()
+  if(!msg){showToast('Message required','#ff3b5c');return}
+  const log=genLog()
+  log.raw_message=msg; log.parsed_message=msg.slice(0,200)
+  log.source=document.getElementById('single-source').value||'api'
+  log.source_type=document.getElementById('single-type').value
+  log.timestamp=new Date().toISOString()
+  state.logs.unshift(log)
+  document.getElementById('single-msg').value=''
+  showToast('Log entry ingested ✓','#00e5a0')
+}
+
+function sendBulkLogs(){
+  const lines=(document.getElementById('bulk-text').value||'').split('\n').filter(l=>l.trim())
+  if(!lines.length){showToast('No log lines found','#ff3b5c');return}
+  lines.forEach(line=>{
+    const log=genLog()
+    log.raw_message=line.slice(0,500); log.parsed_message=line.slice(0,200)
+    log.timestamp=new Date().toISOString()
+    state.logs.unshift(log)
+  })
+  document.getElementById('bulk-text').value=''
+  document.getElementById('bulk-count').textContent='0 lines'
+  showToast(`Ingested ${lines.length} log lines ✓`,'#00e5a0')
+}
+
+// ── System page ───────────────────────────────────────────────────────────
+function loadSystemData(){
+  const ts=new Date().toLocaleString('en',{timeStyle:'medium',dateStyle:'short'})
+  document.getElementById('sys-timestamp').textContent=ts
+  document.getElementById('sys-logs').textContent=state.logs.length
+  document.getElementById('sys-alerts').textContent=state.alerts.filter(a=>!a.is_resolved).length
+  document.getElementById('sys-processed').textContent=state.logs.length
+  document.getElementById('sys-ws').textContent=1
+
+  // Sources table
+  const srcMap={}
+  state.logs.forEach(l=>{
+    const key=l.source+':'+l.source_type
+    if(!srcMap[key])srcMap[key]={source:l.source,type:l.source_type,host:'demo-server-01',count:0,last:l.timestamp}
+    srcMap[key].count++
+    if(l.timestamp>srcMap[key].last)srcMap[key].last=l.timestamp
+  })
+  const sorted=Object.values(srcMap).sort((a,b)=>b.count-a.count)
+  document.getElementById('sources-table').innerHTML=sorted.map(s=>`
+    <tr><td style="color:#c8d8ea;font-weight:500">${s.source}</td>
+    <td><span class="badge INFO">${s.type}</span></td>
+    <td style="font-family:var(--font-mono);color:var(--text3);font-size:10px">${s.host}</td>
+    <td style="font-family:var(--font-mono);color:var(--accent);text-align:right">${s.count}</td>
+    <td style="font-family:var(--font-mono);color:var(--text3);font-size:10px;text-align:right">${fmt(s.last)}</td></tr>
+  `).join('')
+
+  // Users table
+  document.getElementById('users-table').innerHTML=state.users.map(u=>`
+    <tr>
+      <td><div style="display:flex;align-items:center;gap:8px">
+        <div style="width:24px;height:24px;border-radius:6px;background:linear-gradient(135deg,#1d8cf8,#00e5a0);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff">${u.username[0].toUpperCase()}</div>
+        <span style="color:#c8d8ea;font-weight:500">${u.username}</span>
+      </div></td>
+      <td style="color:var(--text2);font-size:10px">${u.email}</td>
+      <td><span class="badge ${u.role==='admin'?'ERROR':u.role==='analyst'?'LOW':'INFO'}">${u.role}</span></td>
+      <td style="color:var(--text3);font-size:10px">${fmtDate(u.created)}</td>
+    </tr>`).join('')
+}
+
+function showAddUserForm(){
+  const f=document.getElementById('add-user-form')
+  f.style.display=f.style.display==='none'?'block':'none'
+}
+
+function addUser(){
+  const uname=document.getElementById('new-uname').value.trim()
+  const email=document.getElementById('new-email').value.trim()
+  if(!uname||!email){showToast('Username and email required','#ff3b5c');return}
+  state.users.push({username:uname,email,role:document.getElementById('new-role').value,created:new Date().toISOString().split('T')[0]})
+  document.getElementById('add-user-form').style.display='none'
+  document.getElementById('new-uname').value=''
+  document.getElementById('new-email').value=''
+  loadSystemData()
+  showToast('User created ✓','#00e5a0')
+}
+
+// ── Time filter ───────────────────────────────────────────────────────────
+function setHours(btn,h){
+  document.querySelectorAll('.time-btn').forEach(b=>b.classList.remove('active'))
+  btn.classList.add('active')
+  state.hours=h
+  renderDashboard()
+}
+
+// ── Toast notifications ───────────────────────────────────────────────────
+function showToast(msg,color='#1d8cf8'){
+  const toast=document.createElement('div')
+  toast.style.cssText=`position:fixed;top:20px;right:20px;background:#0d1929;border:1px solid ${color}40;border-left:3px solid ${color};border-radius:10px;padding:12px 16px;font-size:12px;color:${color};font-family:var(--font-sans);font-weight:600;z-index:9999;box-shadow:0 8px 30px rgba(0,0,0,0.4);animation:fadeIn 0.3s ease-out;max-width:300px`
+  toast.textContent=msg
+  document.body.appendChild(toast)
+  setTimeout(()=>{toast.style.opacity='0';toast.style.transition='opacity 0.3s';setTimeout(()=>toast.remove(),300)},3000)
+}
+
+// ── Live log simulation ───────────────────────────────────────────────────
+function simulateLiveLog(){
+  if(!state.liveEnabled)return
+  const log=genLog()
+  state.logs.unshift(log)
+  if(state.logs.length>1000)state.logs=state.logs.slice(0,1000)
+  state.liveCount++
+  document.getElementById('live-count').textContent=state.liveCount
+
+  if(state.currentPage==='dashboard'){
+    const rl=document.getElementById('recent-logs')
+    if(rl){
+      const newRow=document.createElement('div')
+      newRow.innerHTML=logRow(log)
+      rl.insertBefore(newRow.firstChild,rl.firstChild)
+      if(rl.children.length>20)rl.removeChild(rl.lastChild)
+    }
+    document.getElementById('stat-logs').textContent=state.logs.length
+  }
+  if(state.currentPage==='logs')filterLogs()
+
+  // Simulate occasional alerts
+  if(Math.random()<0.02){
+    const newAlert={
+      id:Date.now(),
+      title:`Suspicious activity from ${log.ip_address}`,
+      severity:['MEDIUM','HIGH'][Math.floor(Math.random()*2)],
+      alert_type:'anomaly',
+      description:`Automated detection: ${log.parsed_message}`,
+      triggered_at:new Date().toISOString(),
+      is_resolved:false,event_count:randInt(3,20),confidence_score:Math.random()*0.4+0.6
+    }
+    state.alerts.unshift(newAlert)
+    if(state.currentPage==='alerts')renderAlerts()
+    showToast(`🔔 New ${newAlert.severity} alert`,newAlert.severity==='HIGH'?'#ff8c42':'#ffd166')
+  }
+}
+
+// ── Startup ───────────────────────────────────────────────────────────────
+renderDashboard()
+setInterval(simulateLiveLog, 2000)   // New log every 2 seconds
+setInterval(renderDashboard, 30000)  // Refresh dashboard every 30s
+
+// Bulk text counter
+setTimeout(()=>{
+  const ta=document.getElementById('bulk-text')
+  if(ta)ta.addEventListener('input',updateBulkCount)
+},100)
+
+console.log('%c🛡️ LogForge Demo Loaded', 'color:#1d8cf8;font-size:16px;font-weight:bold')
+console.log('%cAdmin: admin/admin123 | API: http://localhost:8000/api/docs', 'color:#00e5a0;font-size:12px')
+</script>
+</body>
+</html>
