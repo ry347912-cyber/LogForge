@@ -1,0 +1,19 @@
+Jan 15 10:20:00 webserver sshd[1200]: Server listening on 0.0.0.0 port 22
+Jan 15 10:22:15 webserver sshd[1201]: Failed password for invalid user admin from 203.0.113.45 port 54321 ssh2
+Jan 15 10:22:16 webserver sshd[1202]: Failed password for invalid user root from 203.0.113.45 port 54322 ssh2
+Jan 15 10:22:17 webserver sshd[1203]: Failed password for invalid user ubuntu from 203.0.113.45 port 54323 ssh2
+Jan 15 10:22:18 webserver sshd[1204]: Failed password for invalid user admin from 203.0.113.45 port 54324 ssh2
+Jan 15 10:22:19 webserver sshd[1205]: Failed password for invalid user pi from 203.0.113.45 port 54325 ssh2
+Jan 15 10:22:20 webserver sshd[1206]: Failed password for invalid user test from 203.0.113.45 port 54326 ssh2
+Jan 15 10:22:50 webserver sshd[1207]: Accepted password for deploy from 10.0.0.10 port 22 ssh2
+Jan 15 10:23:00 webserver sshd[1208]: pam_unix(sshd:session): session opened for user deploy by (uid=0)
+Jan 15 10:25:00 webserver sudo[1300]: deploy : TTY=pts/0 ; PWD=/home/deploy ; USER=root ; COMMAND=/usr/bin/apt-get update
+Jan 15 10:26:00 webserver sshd[1209]: Disconnected from user deploy 10.0.0.10 port 22
+Jan 15 10:30:00 webserver sshd[1210]: Failed password for root from 198.51.100.77 port 12345 ssh2
+Jan 15 10:30:01 webserver sshd[1211]: Failed password for root from 198.51.100.77 port 12346 ssh2
+Jan 15 10:30:02 webserver sshd[1212]: Failed password for root from 198.51.100.77 port 12347 ssh2
+Jan 15 10:30:03 webserver sshd[1213]: Invalid user webmaster from 198.51.100.77 port 12348
+Jan 15 10:30:04 webserver sshd[1214]: Invalid user ftpuser from 198.51.100.77 port 12349
+Jan 15 10:35:00 webserver cron[2000]: (CRON) INFO (Running @reboot jobs)
+Jan 15 10:40:00 webserver sshd[1300]: Accepted publickey for admin from 192.168.1.10 port 55678 ssh2
+Jan 15 10:45:00 webserver sudo[2100]: admin : TTY=pts/1 ; PWD=/root ; USER=root ; COMMAND=/bin/systemctl restart nginx

@@ -1,0 +1,15 @@
+{"timestamp":"2025-01-15T10:00:00Z","level":"INFO","message":"Application started","service":"api-gateway","host":"app-01","version":"2.3.1"}
+{"timestamp":"2025-01-15T10:00:05Z","level":"INFO","message":"Database connection established","service":"api-gateway","host":"app-01","db":"postgres","pool_size":10}
+{"timestamp":"2025-01-15T10:01:00Z","level":"INFO","message":"User login successful","service":"auth","host":"app-01","user":"alice","ip":"10.0.0.5"}
+{"timestamp":"2025-01-15T10:05:00Z","level":"WARNING","message":"High memory usage detected","service":"worker","host":"worker-01","memory_pct":87.3,"threshold":85}
+{"timestamp":"2025-01-15T10:06:00Z","level":"ERROR","message":"Database query timeout after 30s","service":"api-gateway","host":"app-01","query":"SELECT * FROM logs","duration_ms":30042}
+{"timestamp":"2025-01-15T10:07:00Z","level":"ERROR","message":"Failed to connect to cache server","service":"api-gateway","host":"app-01","host_target":"redis-01","port":6379}
+{"timestamp":"2025-01-15T10:08:00Z","level":"CRITICAL","message":"Disk space critically low","service":"monitor","host":"storage-01","disk_pct":97.2,"mount":"/data"}
+{"timestamp":"2025-01-15T10:10:00Z","level":"INFO","message":"Cache miss - fetching from database","service":"api-gateway","host":"app-01","key":"user_sessions","ttl":300}
+{"timestamp":"2025-01-15T10:15:00Z","level":"WARNING","message":"Rate limit approaching for IP","service":"api-gateway","host":"app-01","ip":"192.168.1.45","requests":950,"limit":1000,"window":"1h"}
+{"timestamp":"2025-01-15T10:20:00Z","level":"ERROR","message":"Payment processing failed","service":"payments","host":"pay-01","error":"Gateway timeout","amount":149.99,"currency":"USD"}
+{"timestamp":"2025-01-15T10:25:00Z","level":"INFO","message":"Scheduled job completed","service":"cron","host":"app-01","job":"cleanup_expired_sessions","duration_ms":234,"deleted":1547}
+{"timestamp":"2025-01-15T10:30:00Z","level":"WARNING","message":"Unusual login time detected","service":"auth","host":"app-01","user":"bob","ip":"203.0.113.50","time":"03:30 UTC","usual_time":"09:00-17:00 UTC"}
+{"timestamp":"2025-01-15T10:35:00Z","level":"ERROR","message":"SSL certificate expires in 7 days","service":"monitor","host":"lb-01","domain":"api.example.com","expires":"2025-01-22"}
+{"timestamp":"2025-01-15T10:40:00Z","level":"INFO","message":"Auto-scaling triggered","service":"k8s","host":"master-01","reason":"CPU > 80%","replicas_before":3,"replicas_after":6}
+{"timestamp":"2025-01-15T10:45:00Z","level":"DEBUG","message":"Health check passed","service":"api-gateway","host":"app-01","checks":{"db":"ok","cache":"ok","disk":"warning"}}
