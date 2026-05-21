@@ -1,0 +1,29 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: logforge
+      POSTGRES_USER: logforge
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U logforge"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://logforge:${POSTGRES_PASSWORD:-changeme}@postgres/logforge
+      - SECRET_KEY=${SECRET_KEY}
+      - DEBUG=false
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
